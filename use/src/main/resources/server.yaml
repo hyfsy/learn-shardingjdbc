@@ -1,0 +1,271 @@
+
+# 行表达式标识符可以使用 ${...} 或 $->{...}
+# 范围使用 ${1..2}
+# 枚举使用 ${[1, 2]}
+
+# JDBC 逻辑库名称。在集群模式中，使用该参数来联通 ShardingSphere-JDBC 与 ShardingSphere-Proxy。
+# 默认值：logic_db
+databaseName: logic_db
+
+# 模式配置
+mode:
+  type: Standalone # 默认单机，Standalone or Cluster
+  repository: # 持久化仓库配置
+    type: File # Cluster -> zookeeper or Etcd
+    props:
+      path: ~/baB_hyf/.shardingsphere
+#      namespace: governance_ds # 注册中心命名空间
+#      server-lists: localhost:2181 # 注册中心连接地址
+#      retryIntervalMilliseconds: 500
+#      timeToLiveSeconds: 60
+#      maxRetries: 3
+#      operationTimeoutMilliseconds: 500
+  overwrite: true # 是否使用本地配置覆盖持久化配置
+
+# 数据源配置
+dataSources: # 数据源配置，可配置多个 <data-source-name>
+  ds_1: # 数据源名称
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource # 数据源完整类名
+    driverClassName: com.mysql.jdbc.Driver # 数据库驱动类名，以数据库连接池自身配置为准
+    jdbcUrl: jdbc:mysql://localhost:3306/ds_1 # 数据库 URL 连接，以数据库连接池自身配置为准
+    username: root # 数据库用户名，以数据库连接池自身配置为准
+    password: # 数据库密码，以数据库连接池自身配置为准
+    connectionTimeoutMilliseconds: 3000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+    # ... 数据库连接池的其它属性
+
+# 规则配置
+# !! 表示实例化该类，! 表示自定义别名
+rules:
+  # 数据分片规则配置
+  - !SHARDING
+    tables:
+      t_order: # 逻辑表名称
+        actualDataNodes: ds_${0..1}.t_order_$->{0..1} # 由数据源名 + 表名组成（参考 Inline 语法规则）
+        # databaseStrategy (?): # 分库策略，结构和分表策略一致
+        tableStrategy: # 分表策略，缺省表示使用默认分库策略，以下的分片策略只能选其一
+          standard: # 用于单分片键的标准分片场景
+            shardingColumn: order_id # 分片列名称
+            shardingAlgorithmName: t-order-inline # 分片算法名称
+          complex: # 用于多分片键的复合分片场景
+            shardingColumns: # 分片列名称，多个列以逗号分隔
+            shardingAlgorithmName: # 分片算法名称
+          hint: # Hint 分片策略
+            shardingAlgorithmName: xxx.xxx.xxx.HintXXXAlgorithm # 分片算法名称
+          none: # 不分片
+        keyGenerateStrategy: # 分布式序列策略
+          column: order_id # 自增列名称，缺省表示不使用自增主键生成器
+          keyGeneratorName: snowflake # 分布式序列算法名称
+      t_order_item:
+        actualDataNodes: ds_${0..1}.t_order_item_${0..1}
+        tableStrategy:
+          standard:
+            shardingColumn: order_id
+            shardingAlgorithmName: t_order-item-inline
+        keyGenerateStrategy:
+          column: order_item_id
+          keyGeneratorName: snowflake
+      t_account:
+        actualDataNodes: ds_${0..1}.t_account_${0..1}
+        tableStrategy:
+          standard:
+            shardingAlgorithmName: t-account-inline
+        keyGenerateStrategy:
+          column: account_id
+          keyGeneratorName: snowflake
+    autoTables: # 自动分片表规则配置
+      t_order_auto: # 逻辑表名称
+        actualDataSources (?): # 数据源名称
+        shardingStrategy: # 切分策略
+          standard: # 用于单分片键的标准分片场景
+            shardingColumn: # 分片列名称
+            shardingAlgorithmName: # 自动分片算法名称
+    bindingTables: # 绑定表规则列表，logic_table_name_1, logic_table_name_2, ...
+      - t_order,t_order_item
+    broadcastTables: # 广播表规则列表
+      # 指所有的分片数据源中都存在的表，表结构及其数据在每个数据库中均完全一致。
+      # 适用于数据量不大且需要与海量数据的表进行关联查询的场景，例如：字典表
+      - t_address
+    shardingAlgorithms: # 分片算法配置
+      database-inline: # 分片算法名称
+        type: INLINE # 分片算法类型
+        props: # 分片算法属性配置
+          algorithm-expression: ds_${user_id % 2} # A/B的情况在groovy中会返回浮点型，可修改为 A.intdiv(B)
+      t-order-inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_order_${order_id % 2}
+      t_order-item-inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_order_item_${order_id % 2}
+      t-account-inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_account_${account_id % 2}
+          allow-range-query-with-inline-sharding: true # 表达式内允许范围查询的符号
+    keyGenerators: # 分布式序列算法配置
+      snowflake: # 分布式序列算法名称
+        type: SNOWFLAKE # 分布式序列算法类型
+        props: # 分布式序列算法属性配置
+          xxx: xxx
+    defaultDatabaseStrategy: # 默认数据库分片策略
+      none:
+    defaultTableStrategy: # 默认表分片策略
+      none:
+    defaultShardingColumn: account_id # 默认分片列名称
+    defaultKeyGenerateStrategy: database-inline # 默认的分布式序列策略
+  # 读写分离规则配置
+  - !READWRITE_SPLITTING
+    dataSources: # 数据源配置
+      readwrite_ds: # 读写分离逻辑数据源名称
+        staticStrategy: # 静态读写分离类型
+          writeDataSourceName: write_ds # 写库数据源名称
+          readDataSourceNames: # 读库数据源名称，多个从数据源用逗号分隔
+            - read_ds_0
+            - read_ds_1
+        dynamic-strategy: # 动态读写分离类型
+          auto-aware-data-source-name: readwrite_ds # 高可用数据库发现逻辑数据源名称，see HA DB_DISCOVERY
+          write-data-source-query-enabled: true # 从库全部下线，主库是否承担读流量
+        loadBalancerName: random # 负载均衡算法名称
+    loadBalancers: # 负载均衡算法配置
+      random: # 负载均衡算法名称
+        type: RANDOM # 负载均衡算法类型
+        props: # 负载均衡算法属性配置
+          xxx: xxx
+  # 分布式事务规则配置
+  - !TRANSACTION
+    # 本地事务
+    defaultType: LOCAL
+
+    # XA事务
+    # defaultType: XA
+    # # 需要手动添加 Narayana 相关依赖
+    # # - jta-5.12.4.Final.jar
+    # # - arjuna-5.12.4.Final.jar
+    # # - common-5.12.4.Final.jar
+    # # - jboss-connector-api_1.7_spec-1.0.0.Final.jar
+    # # - jboss-logging-3.2.1.Final.jar
+    # # - jboss-transaction-api_1.2_spec-1.0.0.Alpha3.jar
+    # # - jboss-transaction-spi-7.6.0.Final.jar
+    # # - narayana-jts-integration-5.12.4.Final.jar
+    # # - shardingsphere-transaction-xa-narayana-x.x.x-SNAPSHOT.jar
+    # providerType: Narayana/Atomikos
+
+    # 柔性事务
+    # defaultType: BASE
+    # providerType: Seata
+  # 高可用规则配置
+  - !DB_DISCOVERY
+    dataSources:
+      readwrite_ds: # 逻辑数据源名称
+        dataSourceNames: # 数据源名称列表
+          - ds_0
+          - ds_1
+          - ds_2
+        discoveryHeartbeatName: mgr-heartbeat # 心跳检测名称
+        discoveryTypeName: mgr # 发现类型名称
+    discoveryHeartbeats: # 心跳检测配置
+      mgr-heartbeat: # 检测心跳名称
+        props:
+          keep-alive-cron: '0/5 * * * * ?' # cron 表达式'
+    discoveryTypes: # 数据库发现类型配置
+      mgr: # 数据库发现类型名称
+        type: MySQL.MGR # 数据库发现类型
+        props:
+          group-name: 558edd3c-02ec-11ea-9bb3-080027e39bd2 # 数据库发现类型必要参数，如 MGR 的 group-name
+  # 数据加密规则配置
+  - !ENCRYPT
+    tables:
+      t_user: # 加密表名称
+        columns:
+          username: # 加密列名称
+            plainColumn: username_plain # 原文列名称
+            cipherColumn: username # 密文列名称
+            encryptorName: name-encryptor # 加密算法名称
+          pwd:
+            plainColumn: pwd_plain
+            cipherColumn: pwd
+            encryptorName: pwd_encryptor
+            assistedQueryColumn: assisted_query_pwd # 辅助查询列名称，方便对不可逆的加密进行查询
+            assistedQueryEncryptorName: assisted_query_pwd_encryptor # 辅助查询列加密算法
+            queryWithCipherColumn: true # 该字段是否使用加密列进行查询（内部自动转换为明文）。在有原文列的情况下，可以使用原文列进行查询，false表示使用原文列查询
+        queryWithCipherColumn: true # 该表是否使用加密列进行查询，column级配置优先
+    encryptors: # 加密算法配置
+      name-encryptor: # 加解密算法名称
+        type: AES # 加解密算法类型
+        props: # 加解密算法属性配置
+          aes-key-value: 123456abc
+      pwd_encryptor:
+        type: AES
+      assisted_query_pwd_encryptor: # 秘钥改变进行数据清洗时，使用此加密查询对应的辅助查询列，此列一般使用不可逆算法
+        type: SM3
+    queryWithCipherColumn: true # 是否使用加密列进行查询，全局配置，优先级最低
+  # 影子库规则配置
+  - !SHADOW
+    dataSources:
+      shadow_datasource: # 影子库配置名称
+        sourceDataSourceName: ds_0 # 生产数据源名称
+        shadowDataSourceName: ds_shadow # 影子数据源名称
+    tables:
+      t_order:
+        dataSourceNames: # 影子表关联影子数据源名称列表
+          - shadow_datasource
+        shadowAlgorithmNames: # 影子表关联影子算法名称列表
+          - user-id-insert-match-algorithm
+          - user-id-delete-match-algorithm
+          - user-id-select-match-algorithm
+    shadowAlgorithms:
+      user-id-insert-match-algorithm: # 影子算法名称
+        type: SIMPLE_HINT # 影子算法类型
+        props: # 影子算法属性配置
+          shadow: true # sql内存在该注释则匹配，如 /* shadow:true */insert xxx，需要先开启 sqlCommentParseEnabled
+      user-id-delete-match-algorithm:
+        type: REGEX_MATCH
+        props:
+          operation: delete # insert/update/delete/select
+          column: user_id
+          regex: [1] # id为1匹配，yaml语法才有[]，不是正则的！
+      user-id-select-match-algorithm:
+        type: VALUE_MATCH # 值匹配
+        props:
+          operation: select
+          column: user_id
+          value: 1
+    defaultShadowAlgorithmName: user-id-insert-match-algorithm # 默认影子算法名称（选配项）
+  # SQL解析规则配置
+  - !SQL_PARSER
+    sqlCommentParseEnabled: true # 是否解析 SQL 注释
+    sqlStatementCache: # SQL 语句本地缓存配置项
+      initialCapacity: 2000 # 本地缓存初始容量
+      maximumSize: 65535 # 本地缓存最大容量
+    parseTreeCache: # 解析树本地缓存配置项
+      initialCapacity: 128 # 本地缓存初始容量
+      maximumSize: 1024 # 本地缓存最大容量
+  # SQL翻译规则配置
+  - !SQL_TRANSLATOR
+    type: JOOQ # SQL 翻译器类型
+    useOriginalSQLWhenTranslatingFailed: true # SQL 翻译失败是否使用原始 SQL 继续执行
+
+# 额外配置
+props:
+  # 是否在日志中打印 SQL， 打印 SQL 可以帮助开发者快速定位系统问题。
+  # 日志内容包含：逻辑 SQL，真实 SQL 和 SQL 解析结果。
+  # 如果开启配置，日志将使用 Topic ShardingSphere-SQL，日志级别是 INFO
+  sql-show: false
+  # 是否在日志中打印简单风格的 SQL
+  sql-simple: false
+  # 用于设置任务处理线程池的大小
+  # 每个 ShardingSphereDataSource 使用一个独立的线程池，同一个 JVM 的不同数据源不共享线程池
+  kernel-executor-size: infinite
+  # 一次查询请求在每个数据库实例中所能使用的最大连接数
+  max-connections-size-per-query: 1
+  # 在程序启动和更新时，是否检查分片元数据的结构一致性
+  check-table-metadata-enabled: false
+  # 是否开启联邦查询
+  sql-federation-enabled: false
+
+

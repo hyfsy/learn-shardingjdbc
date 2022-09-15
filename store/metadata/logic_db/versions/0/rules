@@ -1,0 +1,28 @@
+- !SHARDING
+  keyGenerators:
+    snowflake:
+      type: SNOWFLAKE
+  shardingAlgorithms:
+    user_id_database_online:
+      props:
+        algorithm-expression: ds_$->{user_id % 2 + 1}
+      type: INLINE
+    user_id_table_online:
+      props:
+        algorithm-expression: t_user_$->{user_id % 2 + 1}
+      type: INLINE
+  tables:
+    user:
+      actualDataNodes: ds_$->{[1,2]}.t_user_$->{[1,2]}
+      databaseStrategy:
+        standard:
+          shardingAlgorithmName: user_id_database_online
+          shardingColumn: user_id
+      keyGenerateStrategy:
+        column: user_id
+        keyGeneratorName: snowflake
+      logicTable: user
+      tableStrategy:
+        standard:
+          shardingAlgorithmName: user_id_table_online
+          shardingColumn: user_id

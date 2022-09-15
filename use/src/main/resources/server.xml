@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:shardingsphere="http://shardingsphere.apache.org/schema/shardingsphere/datasource"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://shardingsphere.apache.org/schema/shardingsphere/datasource
+                           http://shardingsphere.apache.org/schema/shardingsphere/datasource/datasource.xsd
+                           ">
+
+    <!--
+
+        XML配置参考:
+        https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/spring-namespace/
+
+     -->
+
+    <shardingsphere:data-source id="ds" database-name="foo_schema" data-source-names="..." rule-refs="...">
+        <shardingsphere:mode type="..."/>
+        <props>
+            <prop key="xxx.xxx">${xxx.xxx}</prop>
+        </props>
+    </shardingsphere:data-source>
+</beans>

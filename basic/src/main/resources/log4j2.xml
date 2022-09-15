@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="INFO">
+    <appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5p] [%-20.20c] : %m%n"></PatternLayout>
+        </Console>
+    </appenders>
+    <loggers>
+        <root level="INFO">
+            <appender-ref ref="Console"/>
+        </root>
+        <logger name="com.zaxxer.hikari" level="WARN" additivity="false">
+            <appender-ref ref="Console"/>
+        </logger>
+    </loggers>
+</configuration>

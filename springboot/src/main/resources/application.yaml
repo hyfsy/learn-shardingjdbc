@@ -1,0 +1,75 @@
+server:
+  port: 8082
+
+spring:
+  shardingsphere:
+    mode:
+      type: Standalone
+      repository:
+        type: File
+        props:
+          path: E:\study\code\idea4\learn-shardingjdbc\store
+      overwrite: true # 是否使用本地配置覆盖持久化配置
+    datasource:
+      names: ds_0, ds_1, ds_2, ds_3, ds_shadow
+      ds_0:
+        type: com.zaxxer.hikari.HikariDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        jdbcUrl: jdbc:mysql://localhost:3306/shardingjdbc?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyflearn
+      ds_1:
+        type: com.zaxxer.hikari.HikariDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        jdbcUrl: jdbc:mysql://localhost:3306/shardingjdbc1?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyflearn
+      ds_2:
+        type: com.zaxxer.hikari.HikariDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        jdbcUrl: jdbc:mysql://localhost:3306/shardingjdbc2?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyflearn
+      ds_3:
+        type: com.zaxxer.hikari.HikariDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        jdbcUrl: jdbc:mysql://localhost:3306/shardingjdbc3?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyflearn
+      ds_shadow:
+        type: com.zaxxer.hikari.HikariDataSource
+        driverClassName: com.mysql.cj.jdbc.Driver
+        jdbcUrl: jdbc:mysql://localhost:3306/shardingjdbc_shadow?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyflearn
+    rules:
+      sharding: # 分片
+        tables:
+          user:
+            actualDataNodes: ds_$->{[1,2]}.t_user_$->{[1,2]}
+            databaseStrategy:
+              standard:
+                shardingColumn: user_id
+                shardingAlgorithmName: user_id_database_online
+            tableStrategy:
+              standard:
+                shardingColumn: user_id
+                shardingAlgorithmName: user_id_table_online
+            keyGenerateStrategy:
+              column: user_id
+              keyGeneratorName: snowflake
+        sharding-algorithms:
+          user_id_database_online:
+            type: INLINE
+            props:
+              algorithm-expression: ds_$->{user_id % 2 + 1}
+          user_id_table_online:
+            type: INLINE
+            props:
+              algorithm-expression: t_user_$->{user_id % 2 + 1}
+        key-generators:
+          snowflake:
+            type: SNOWFLAKE
+    props:
+      sql-show: true # 打印处理过的sql
+      sql-simple: true
