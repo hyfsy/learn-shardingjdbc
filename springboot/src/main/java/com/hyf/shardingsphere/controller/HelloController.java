@@ -45,10 +45,10 @@ public class HelloController {
     @RequestMapping("add_gene")
     public User addUserGene(@RequestParam("name") String name) {
         User user = new User();
-        long gene = GeneUtils.gene(name, 4);
-        Long id = SnowflakeUtils.generate(gene);
-        System.out.println(id);
-        user.setUserId(id);
+        // long gene = GeneUtils.gene(name, 4);
+        // Long id = SnowflakeUtils.generate(gene);
+        // System.out.println(id);
+        // user.setUserId(id);
         user.setName(name);
         userMapper.insertGene(user);
         return user;
