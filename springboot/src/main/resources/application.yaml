@@ -58,6 +58,11 @@ spring:
             keyGenerateStrategy:
               column: user_id
               keyGeneratorName: snowflake
+          t_order:
+            actualDataNodes: ds_0.t_order
+            keyGenerateStrategy:
+              column: id
+              keyGeneratorName: snowflake
         sharding-algorithms:
           user_id_database_online:
             type: INLINE
@@ -72,4 +77,16 @@ spring:
             type: SNOWFLAKE
     props:
       sql-show: true # 打印处理过的sql
-      sql-simple: true
+      sql-simple: false # sql简化
+  application:
+    name: learn-shardingjdbc
+
+seata:
+  application-id: ${spring.application.name}
+  #  tx-service-group: hyf_tc_group
+  service:
+    vgroup-mapping:
+      hyf_tc_group: SEATA_CLUSTER_REAL
+    grouplist:
+      default: 127.0.0.1:8091
+      SEATA_CLUSTER_REAL: 127.0.0.1:8091

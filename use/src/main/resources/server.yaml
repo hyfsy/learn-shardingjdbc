@@ -97,6 +97,7 @@ rules:
       t-order-inline:
         type: INLINE
         props:
+          # t_order_${((order_id + 1) % 4).intdiv(2) + 1} 均匀分布两库两表
           algorithm-expression: t_order_${order_id % 2}
       t_order-item-inline:
         type: INLINE

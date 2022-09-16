@@ -2,8 +2,7 @@ package com.hyf.shardingsphere.controller;
 
 import com.hyf.shardingsphere.entity.User;
 import com.hyf.shardingsphere.mapper.UserMapper;
-import com.hyf.shardingsphere.util.GeneUtils;
-import com.hyf.shardingsphere.util.SnowflakeUtils;
+import com.hyf.shardingsphere.service.DistributedTxService;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,6 +25,9 @@ public class HelloController {
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    private DistributedTxService distributedTxService;
 
     // http://localhost:8082/user/1
 
@@ -57,5 +59,10 @@ public class HelloController {
     @RequestMapping("list")
     public List<User> list() {
         return userMapper.list();
+    }
+
+    @RequestMapping("tx")
+    public void withDistributedTx() {
+        distributedTxService.invoke();
     }
 }
